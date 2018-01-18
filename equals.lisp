@@ -58,28 +58,31 @@ information about its recursive dependent behavior."))
   (declare (ignore keys recursive))
   (eq x y))
 
-(defmethod equals ((x hash-table) (y hash-table) &rest keys
-                   &key recursive
-                        (by-key t)
-                        (by-value t)
-                        (check-properties t)
-                   &allow-other-keys)
+(defmethod equals ((x hash-table) (y hash-table) &rest keys &key recursive (by-key t) (by-value t) (check-properties t) ignore-key-order &allow-other-keys)
   (declare (ignore recursive))
   (if (eq x y)
       t
       (when (= (hash-table-count x)
                (hash-table-count y))
         (let ((key-test
-               (if by-key
-                   (loop for x-keys being the hash-keys of x
-                         for y-keys being the hash-keys of y
-                         always (apply #'equals x-keys y-keys keys))
+		(if by-key
+		    (if ignore-key-order
+			t
+			(loop for x-keys being the hash-keys of x
+			      for y-keys being the hash-keys of y
+			      always (apply #'equals x-keys y-keys keys)))
                    t))
               (value-test
-               (if by-value
-                   (loop for x-val being the hash-values of x
-                         for y-val being the hash-values of y
-                         always (apply #'equals x-val y-val keys))
+		(if by-value
+		    (if ignore-key-order
+			(loop for x-key being the hash-keys of x
+			      always (apply #'equals
+					    (gethash x-key x)
+					    (gethash x-key y)
+					    keys))
+			(loop for x-val being the hash-values of x
+			      for y-val being the hash-values of y
+			      always (apply #'equals x-val y-val keys)))
                    t))
               (check-properties-test
                (if check-properties
